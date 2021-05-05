@@ -5,8 +5,10 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true";
-static int borderpx = 2;
+/// static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true";
+/// static int borderpx = 2;
+static char *font = "monospace:size=12";
+static int borderpx = 10;
 
 /*
  * What program is execed by st depends of these precedence rules:
@@ -106,36 +108,59 @@ char *termname = "st-256color";
 unsigned int tabspaces = 8;
 
 /* bg opacity */
-float alpha = 0.8;
+/// float alpha = 0.8;
+// float alpha = 0.854101f;
+float alpha = 0.8f;
 
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
 	/* 8 normal colors */
-	"black",
-	"red3",
-	"green3",
-	"yellow3",
-	"blue2",
-	"magenta3",
-	"cyan3",
-	"gray90",
+///	"black",
+///	"red3",
+///	"green3",
+///	"yellow3",
+///	"blue2",
+///	"magenta3",
+///	"cyan3",
+///	"gray90",
+	"#010008",
+	"#A71B1A",
+	"#3B8526",
+	"#E49202",
+	"#1D576D",
+	"#97219C",
+	"#24866F",
+	"#B5AD64",
 
 	/* 8 bright colors */
-	"gray50",
-	"red",
-	"green",
-	"yellow",
-	"#5c5cff",
-	"magenta",
-	"cyan",
-	"white",
+/// "gray50",
+/// "red",
+/// "green",
+/// "yellow",
+/// "#5c5cff",
+/// "magenta",
+/// "cyan",
+/// "white",
+	"#1C1C1C",
+	"#BF3130",
+	"#58A642",
+	"#FFB026",
+//	"#31788E",
+	"RoyalBlue",
+	"#A7248C",
+	"#37A48D",
+	"#CEC67D",
 
 	[255] = 0,
 
 	/* more colors can be added after 255 to use with DefaultXX */
-	"#cccccc",
-	"#555555",
-	"black",
+///	"#cccccc",
+///	"#555555",
+///	"black",
+	"#d40000",
+	"#ff0000",
+	"#080000",
+	"#ff0000",
 };
 
 
@@ -143,7 +168,8 @@ static const char *colorname[] = {
  * Default colors (colorname index)
  * foreground, background, cursor, reverse cursor
  */
-unsigned int defaultfg = 7;
+/// unsigned int defaultfg = 7;
+unsigned int defaultfg = 259;
 unsigned int defaultbg = 258;
 static unsigned int defaultcs = 256;
 static unsigned int defaultrcs = 257;
@@ -185,6 +211,42 @@ static unsigned int defaultattr = 11;
 static uint forcemousemod = ShiftMask;
 
 /*
+ * utility...
+ */
+
+/* url matcher */
+# define XURLS "perl -ne \"/(\\b([a-zA-Z]+:\\/\\/\\w[\\w-.:@]*|www\\.\\w[\\w-]*\\.\\w[\\w-.]*)(\\/[^\\\"' ()]*)?)/ && print\\\"\\$1\\n\\\"\" | tac | awk '!visited[$0]++'"
+/* open urls */
+static char *openurlcmd[] = { "/bin/sh", "-c",
+	"url=\"$("XURLS" | dmenu -p open: -l 10)\"; [ \"$url\" != \"\" ] && $BROWSER $url", NULL };
+/* copy urls */
+static char *copyurlcmd[] = { "/bin/sh", "-c",
+	"url=\"$("XURLS" | dmenu -p copy: -l 10)\"; [ \"$url\" != \"\" ] && echo $url | xsel -ib", NULL };
+/* open last url */
+static char *openlasturlcmd[] = { "/bin/sh", "-c",
+	"url=\"$("XURLS" | sed '1!d')\"; [ \"$url\" != \"\" ] && $BROWSER $url", NULL };
+/* visual select */
+static const char * visualselectcmd [] = { "/bin/sh", "-c",
+	"tmp=`mktemp`;"
+	"cat > $tmp;"
+	"(st -n pop-up -g 120x35 -e "
+		"$SHELL -c \"nvim +'%s/ $// | set nonu nornu' $tmp\");"
+	"rm $tmp",
+};
+/* escape and paste clipboard's content */
+void paste_esc ()
+{
+	// FILE * clip_escaped = popen ("xsel -ob | xsel -ib ; xsel -ob | perl -ne s/\\(\\[\\!\\#\\\\\\$\\%\\&\\\\\\*\\\\\\(\\\\\\)\\ \\=\\'\\\"\\\\\\\\\\\\\\|\\\\\\[\\\\\\]\\`\\~\\,\\<\\>\\\\\\?\\]\\)/\\\\\\\\\\\\1/g\\;\\ print", "r");
+	FILE * clip_escaped = popen ("printf %q \"$(xclip -o -selection clipboard)\"", "r");
+	if (clip_escaped == NULL) return;
+	char buff [256];
+	size_t buffsize;
+	while (buffsize = fread (buff, 1, 255, clip_escaped))
+		ttywrite (buff, buffsize, 1);
+	fclose (clip_escaped);
+}
+
+/*
  * Internal mouse shortcuts.
  * Beware that overloading Button1 will disable the selection.
  */
@@ -199,24 +261,39 @@ static MouseShortcut mshortcuts[] = {
 
 /* Internal keyboard shortcuts. */
 #define MODKEY Mod1Mask
+#define AltMask Mod1Mask
 #define TERMMOD (ControlMask|ShiftMask)
 
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
-	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
-	{ ControlMask,          XK_Print,       toggleprinter,  {.i =  0} },
-	{ ShiftMask,            XK_Print,       printscreen,    {.i =  0} },
-	{ XK_ANY_MOD,           XK_Print,       printsel,       {.i =  0} },
-	{ TERMMOD,              XK_Prior,       zoom,           {.f = +1} },
-	{ TERMMOD,              XK_Next,        zoom,           {.f = -1} },
-	{ TERMMOD,              XK_Home,        zoomreset,      {.f =  0} },
-	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
-	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
-	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
-	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
-	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
-	{ ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} },
-	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
+///	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
+///	{ ControlMask,          XK_Print,       toggleprinter,  {.i =  0} },
+///	{ ShiftMask,            XK_Print,       printscreen,    {.i =  0} },
+///	{ XK_ANY_MOD,           XK_Print,       printsel,       {.i =  0} },
+///	{ TERMMOD,              XK_Prior,       zoom,           {.f = +1} },
+///	{ TERMMOD,              XK_Next,        zoom,           {.f = -1} },
+///	{ TERMMOD,              XK_Home,        zoomreset,      {.f =  0} },
+///	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
+///	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
+///	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
+///	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
+///	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
+///	{ ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} },
+///	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
+	{ AltMask,              XK_p,           printscreen,    {.i =  0} },
+	{ TERMMOD,              XK_plus,        zoom,           {.f = +1} },
+	{ TERMMOD,              XK_underscore,  zoom,           {.f = -1} },
+	{ TERMMOD,              XK_parenright,  zoomreset,      {.f =  0} },
+	{ AltMask,              XK_c,           clipcopy,       {.i =  0} },
+	{ AltMask,              XK_v,           clippaste,      {.i =  0} },
+	{ AltMask,              XK_y,           selpaste,       {.i =  0} },
+	{ TERMMOD,              XK_V,           paste_esc,      {.i =  0} },
+	{ AltMask,              XK_k,           kscrollup,      {.i = +1} },
+	{ AltMask,              XK_j,           kscrolldown,    {.i = +1} },
+	{ AltMask,              XK_u,           externalpipe,   { .v = openurlcmd }      },
+	{ AltMask,              XK_i,           externalpipe,   { .v = copyurlcmd }      },
+	{ AltMask,              XK_o,           externalpipe,   { .v = openlasturlcmd }  },
+	{ AltMask,              XK_Escape,      externalpipe,   { .v = visualselectcmd } },
 };
 
 /*
