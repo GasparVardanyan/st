@@ -230,7 +230,7 @@ static const char * visualselectcmd [] = { "/bin/sh", "-c",
 	"tmp=`mktemp`;"
 	"cat > $tmp;"
 	"(st -n pop-up -g 120x35 -e "
-		"$SHELL -c \"nvim +'%s/ $// | set nonu nornu' $tmp\");"
+		"$SHELL -c \"nvim +'%s/ $// | set nonu nornu nosmd nosc hidden noru' $tmp\");"
 	"rm $tmp",
 };
 /* escape and paste clipboard's content */
