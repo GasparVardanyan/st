@@ -242,7 +242,7 @@ void paste_esc ()
 	char buff [256];
 	size_t buffsize;
 	while (buffsize = fread (buff, 1, 255, clip_escaped))
-		ttywrite (buff, buffsize, 1);
+		ttywrite (buff, buffsize, 0);
 	fclose (clip_escaped);
 }
 
@@ -290,6 +290,8 @@ static Shortcut shortcuts[] = {
 	{ TERMMOD,              XK_V,           paste_esc,      {.i =  0} },
 	{ AltMask,              XK_k,           kscrollup,      {.i = +1} },
 	{ AltMask,              XK_j,           kscrolldown,    {.i = +1} },
+	{ AltMask,              XK_b,           kscrollup,      {.i = -1} },
+	{ AltMask,              XK_f,           kscrolldown,    {.i = -1} },
 	{ AltMask,              XK_u,           externalpipe,   { .v = openurlcmd }      },
 	{ AltMask,              XK_i,           externalpipe,   { .v = copyurlcmd }      },
 	{ AltMask,              XK_o,           externalpipe,   { .v = openlasturlcmd }  },
